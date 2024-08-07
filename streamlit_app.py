@@ -116,3 +116,26 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Add footer
+footer = st.container()
+footer.markdown(
+    '''
+    <style>
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: black;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+    }
+    </style>
+    <div class="footer">
+        <p>© 2024 Bloch AI LTD - All Rights Reserved. <a href="https://www.bloch.ai" style="color: white;">www.bloch.ai</a></p>
+    </div>
+    ''',
+    unsafe_allow_html=True
+)
