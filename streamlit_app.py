@@ -7,9 +7,18 @@ from nltk.tokenize import word_tokenize
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import seaborn as sns
+import tensorflow as tf
+from tensorflow.keras.layers import Dense, LayerNormalization
 
 # Download necessary NLTK data
 nltk.download('punkt', quiet=True)
+
+# Load pre-trained word embeddings (for simplicity, using random embeddings here)
+def load_embeddings(vocab):
+    embeddings = {}
+    for word in vocab:
+        embeddings[word] = np.random.rand(50)  # 50-dimensional random embeddings
+    return embeddings
 
 class SimpleLanguageModel:
     def __init__(self):
@@ -19,21 +28,18 @@ class SimpleLanguageModel:
     def train(self, text):
         tokens = word_tokenize(text.lower())
         self.vocab.update(tokens)
-        for i in range(len(tokens) - 1):
-            self.model[tokens[i]][tokens[i + 1]] += 1
-        # Find the token with the most transitions
-        max_transitions_token = max(self.model, key=lambda k: len(self.model[k]) if self.model[k] else 0)
-        max_transitions = self.model[max_transitions_token]
-        return tokens, max_transitions_token, max_transitions
+        for i in range(len(tokens) - 2):  # Trigrams for better context
+            self.model[(tokens[i], tokens[i + 1])][tokens[i + 2]] += 1
+        embeddings = load_embeddings(self.vocab)
+        return tokens, embeddings
 
-    def generate(self, start_token, length=10, temperature=1.0):
-        current_token = start_token
-        result = [{"token": current_token, "rationale": f"Starting token: '{current_token}'"}]
-        for _ in range(length - 1):
-            next_token_probs = self.model[current_token]
+    def generate(self, start_tokens, length=10, temperature=1.0):
+        current_tokens = start_tokens
+        result = [{"token": token, "rationale": f"Starting token: '{token}'"} for token in current_tokens]
+        for _ in range(length - len(start_tokens)):
+            next_token_probs = self.model[(current_tokens[-2], current_tokens[-1])]
             if not next_token_probs:
                 break
-            # Apply temperature
             adjusted_probs = {k: v ** (1 / temperature) for k, v in next_token_probs.items()}
             total = sum(adjusted_probs.values())
             adjusted_probs = {k: v / total for k, v in adjusted_probs.items()}
@@ -46,7 +52,7 @@ class SimpleLanguageModel:
                 f"Temperature of {temperature} {'flattened' if temperature > 1 else 'sharpened' if temperature < 1 else 'maintained'} the probability distribution."
             )
             result.append({"token": next_token, "rationale": rationale})
-            current_token = next_token
+            current_tokens.append(next_token)
         return result
 
 def simulate_attention(tokens, output_tokens):
@@ -56,6 +62,26 @@ def simulate_attention(tokens, output_tokens):
         for i in range(len(row)):
             row[i] /= total
     return attention_matrix
+
+class SimpleTransformerBlock(tf.keras.layers.Layer):
+    def __init__(self, embed_dim, num_heads, ff_dim, rate=0.1):
+        super(SimpleTransformerBlock, self).__init__()
+        self.att = tf.keras.layers.MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
+        self.ffn = tf.keras.Sequential(
+            [Dense(ff_dim, activation="relu"), Dense(embed_dim),]
+        )
+        self.layernorm1 = LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = LayerNormalization(epsilon=1e-6)
+        self.dropout1 = tf.keras.layers.Dropout(rate)
+        self.dropout2 = tf.keras.layers.Dropout(rate)
+
+    def call(self, inputs, training):
+        attn_output = self.att(inputs, inputs)
+        attn_output = self.dropout1(attn_output, training=training)
+        out1 = self.layernorm1(inputs + attn_output)
+        ffn_output = self.ffn(out1)
+        ffn_output = self.dropout2(ffn_output, training=training)
+        return self.layernorm2(out1 + ffn_output)
 
 def main():
     st.title("💻 LLM Simulator App")
@@ -77,13 +103,13 @@ def main():
     if st.button("Process"):
         if input_text:
             # Tokenization and training
-            tokens, max_transitions_token, max_transitions = st.session_state.language_model.train(input_text)
+            tokens, embeddings = st.session_state.language_model.train(input_text)
             
             # Store the tokens and generated data in session state to avoid recomputation
             st.session_state.tokens = tokens
-            st.session_state.max_transitions_token = max_transitions_token
-            st.session_state.max_transitions = max_transitions
-            output_with_rationales = st.session_state.language_model.generate(tokens[0], output_length, temperature)
+            st.session_state.embeddings = embeddings
+            start_tokens = tokens[:2]  # Starting with the first two tokens
+            output_with_rationales = st.session_state.language_model.generate(start_tokens, output_length, temperature)
             st.session_state.output_with_rationales = output_with_rationales
             st.session_state.generated_tokens = [entry["token"] for entry in output_with_rationales]
             st.session_state.generated_sentence = " ".join(st.session_state.generated_tokens)
@@ -115,7 +141,7 @@ def main():
         st.session_state.selected_token = st.selectbox("Select a token to see next token probabilities:", list(st.session_state.language_model.vocab), index=list(st.session_state.language_model.vocab).index(st.session_state.selected_token) if st.session_state.selected_token else 0)
 
         if st.session_state.selected_token:
-            next_token_probs = st.session_state.language_model.model[st.session_state.selected_token]
+            next_token_probs = st.session_state.language_model.model[(st.session_state.selected_token,)]
             adjusted_probs = {k: v ** (1 / temperature) for k, v in next_token_probs.items()}
             total = sum(adjusted_probs.values())
             adjusted_probs = {k: v / total for k, v in adjusted_probs.items()}
