@@ -20,6 +20,10 @@ class SimpleLanguageModel:
         self.vocab.update(tokens)
         for i in range(len(tokens) - 1):
             self.model[tokens[i]][tokens[i + 1]] += 1
+        # Debugging: Print the model state after training
+        st.write("Training complete. Model state:")
+        for word, next_words in self.model.items():
+            st.write(f"{word}: {dict(next_words)}")
 
     def generate(self, start_token, length=10, temperature=1.0):
         current_token = start_token
@@ -71,7 +75,6 @@ def main():
 
             # Train the language model
             st.session_state.language_model.train(input_text)
-            st.write("Model (after training):", dict(st.session_state.language_model.model))
 
             # Generate output
             st.subheader("LLM Output")
