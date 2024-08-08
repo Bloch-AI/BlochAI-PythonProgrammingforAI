@@ -112,6 +112,7 @@ def main():
 
                     # Attention visualization
                     st.subheader("Attention Visualization")
+                    st.write("The attention visualization shows how each output token attends to each input token.")
                     attention_matrix = simulate_attention(tokens, generated_tokens)
                     
                     fig, ax = plt.subplots(figsize=(10, 8))
