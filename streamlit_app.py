@@ -1,6 +1,7 @@
 import streamlit as st
 import time
 import random
+import numpy as np
 import nltk
 from nltk.tokenize import word_tokenize
 from collections import defaultdict
@@ -50,10 +51,9 @@ class SimpleLanguageModel:
 
 def simulate_attention(tokens, output_tokens):
     attention_matrix = [[random.random() for _ in range(len(tokens))] for _ in range(len(output_tokens))]
-    for row in attention_matrix:
-        total = sum(row)
+    for row in attention_matrix, row_total in zip(attention_matrix, map(sum, attention_matrix)):
         for i in range(len(row)):
-            row[i] /= total
+            row[i] /= row_total
     return attention_matrix
 
 def main():
@@ -115,13 +115,24 @@ def main():
 
         if st.session_state.selected_token:
             next_token_probs = st.session_state.language_model.model[st.session_state.selected_token]
+            adjusted_probs = {k: v ** (1 / temperature) for k, v in next_token_probs.items()}
+            total = sum(adjusted_probs.values())
+            adjusted_probs = {k: v / total for k, v in adjusted_probs.items()}
+
             if next_token_probs:
                 fig, ax = plt.subplots()
                 tokens, probs = zip(*sorted(next_token_probs.items(), key=lambda x: x[1], reverse=True)[:10])
-                ax.bar(tokens, probs)
-                plt.xticks(rotation=45, ha='right')
+                adj_tokens, adj_probs = zip(*sorted(adjusted_probs.items(), key=lambda x: x[1], reverse=True)[:10])
+                bar_width = 0.35
+                index = np.arange(len(tokens))
+                
+                bar1 = ax.bar(index, probs, bar_width, label='Original Probabilities')
+                bar2 = ax.bar(index + bar_width, adj_probs, bar_width, label='Adjusted Probabilities (Temperature)')
+
+                plt.xticks(index + bar_width / 2, tokens, rotation=45, ha='right')
                 plt.xlabel("Next Tokens")
                 plt.ylabel("Probability")
+                plt.legend()
                 st.pyplot(fig)
             else:
                 st.write("No next token probabilities available for the selected token.")
