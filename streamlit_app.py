@@ -20,10 +20,9 @@ class SimpleLanguageModel:
         self.vocab.update(tokens)
         for i in range(len(tokens) - 1):
             self.model[tokens[i]][tokens[i + 1]] += 1
-        # Debugging: Print the model state after training
-        st.write("Training complete. Model state:")
-        for word, next_words in self.model.items():
-            st.write(f"{word}: {dict(next_words)}")
+        # Find the token with the most transitions
+        max_transitions_token = max(self.model, key=lambda k: len(self.model[k]))
+        return tokens, max_transitions_token, self.model[max_transitions_token]
 
     def generate(self, start_token, length=10, temperature=1.0):
         current_token = start_token
@@ -68,13 +67,17 @@ def main():
 
     if st.button("Process"):
         if input_text:
-            # Tokenization
-            tokens = word_tokenize(input_text.lower())
-            st.subheader("Tokenization")
-            st.write("Tokens:", tokens)
+            # Tokenization and training
+            tokens, max_transitions_token, max_transitions = st.session_state.language_model.train(input_text)
+            
+            # Collapsible sections
+            with st.expander("Tokenization and Model State", expanded=False):
+                st.subheader("Tokenization")
+                st.write("Tokens:", tokens)
 
-            # Train the language model
-            st.session_state.language_model.train(input_text)
+                st.subheader("Model State Example")
+                st.write(f"Token with the most transitions: '{max_transitions_token}'")
+                st.write(f"Next tokens and their counts: {dict(max_transitions)}")
 
             # Generate output
             st.subheader("LLM Output")
@@ -150,4 +153,3 @@ footer.markdown(
     ''',
     unsafe_allow_html=True
 )
-
