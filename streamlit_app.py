@@ -78,71 +78,53 @@ def main():
             # Tokenization and training
             tokens, max_transitions_token, max_transitions = st.session_state.language_model.train(input_text)
             
-            # Collapsible sections
-            with st.expander("Tokenization and Model State", expanded=False):
-                st.subheader("Tokenization")
-                st.write("Tokens:", tokens)
+            # Store the tokens and generated data in session state to avoid recomputation
+            st.session_state.tokens = tokens
+            st.session_state.max_transitions_token = max_transitions_token
+            st.session_state.max_transitions = max_transitions
+            output_with_rationales = st.session_state.language_model.generate(tokens[0], output_length, temperature)
+            st.session_state.output_with_rationales = output_with_rationales
+            st.session_state.generated_tokens = [entry["token"] for entry in output_with_rationales]
+            st.session_state.generated_sentence = " ".join(st.session_state.generated_tokens)
+        
+    if 'output_with_rationales' in st.session_state:
+        st.subheader("LLM Output")
+        st.write("Generated Output Sentence:", st.session_state.generated_sentence)
 
-                st.subheader("Model State Example")
-                st.write(f"Token with the most transitions: '{max_transitions_token}'")
-                st.write(f"Next tokens and their counts: {dict(max_transitions)}")
+        with st.expander("Output Tokens with Rationales", expanded=True):
+            for i, entry in enumerate(st.session_state.output_with_rationales):
+                st.write(f"{i}: {entry['token']} - {entry['rationale']}")
 
-            # Generate output
-            st.subheader("LLM Output")
-            output_area = st.empty()
-            progress_bar = st.progress(0)
+        st.subheader("Attention Visualization")
+        st.write("The attention visualization shows how each output token attends to each input token.")
+        attention_matrix = simulate_attention(st.session_state.tokens, st.session_state.generated_tokens)
+        
+        fig, ax = plt.subplots(figsize=(10, 8))
+        sns.heatmap(attention_matrix, xticklabels=st.session_state.tokens, yticklabels=st.session_state.generated_tokens, ax=ax, cmap="YlOrRd")
+        plt.xlabel("Input Tokens")
+        plt.ylabel("Output Tokens")
+        st.pyplot(fig)
 
-            if tokens:
-                output_with_rationales = st.session_state.language_model.generate(tokens[0], output_length, temperature)
-                generated_tokens = [entry["token"] for entry in output_with_rationales]
-                generated_sentence = " ".join(generated_tokens)
-                st.write("Generated Output Sentence:", generated_sentence)
+        st.subheader("Token Probability Visualization")
+        st.write("The token probability visualization shows the likelihood of each possible next token given the current token, based on the training data.")
+        
+        if 'selected_token' not in st.session_state:
+            st.session_state.selected_token = None
+        
+        st.session_state.selected_token = st.selectbox("Select a token to see next token probabilities:", list(st.session_state.language_model.vocab), index=list(st.session_state.language_model.vocab).index(st.session_state.selected_token) if st.session_state.selected_token else 0)
 
-                if output_with_rationales:
-                    for i, token in enumerate(generated_tokens):
-                        progress_bar.progress((i + 1) / len(output_with_rationales))
-                        time.sleep(0.2)
-
-                    st.success("Processing complete!")
-
-                    # Display rationale for each token in an expandable section
-                    with st.expander("Output Tokens with Rationales", expanded=True):
-                        for i, entry in enumerate(output_with_rationales):
-                            st.write(f"{i}: {entry['token']} - {entry['rationale']}")
-
-                    # Attention visualization
-                    st.subheader("Attention Visualization")
-                    st.write("The attention visualization shows how each output token attends to each input token.")
-                    attention_matrix = simulate_attention(tokens, generated_tokens)
-                    
-                    fig, ax = plt.subplots(figsize=(10, 8))
-                    sns.heatmap(attention_matrix, xticklabels=tokens, yticklabels=generated_tokens, ax=ax, cmap="YlOrRd")
-                    plt.xlabel("Input Tokens")
-                    plt.ylabel("Output Tokens")
-                    st.pyplot(fig)
-
-                    # Token probability visualization
-                    st.subheader("Token Probability Visualization")
-                    st.write("The token probability visualization shows the likelihood of each possible next token given the current token, based on the training data.")
-                    start_token = st.selectbox("Select a token to see next token probabilities:", list(st.session_state.language_model.vocab))
-                    next_token_probs = st.session_state.language_model.model[start_token]
-                    if next_token_probs:
-                        fig, ax = plt.subplots()
-                        tokens, probs = zip(*sorted(next_token_probs.items(), key=lambda x: x[1], reverse=True)[:10])
-                        ax.bar(tokens, probs)
-                        plt.xticks(rotation=45, ha='right')
-                        plt.xlabel("Next Tokens")
-                        plt.ylabel("Probability")
-                        st.pyplot(fig)
-                    else:
-                        st.write("No next token probabilities available for the selected token.")
-                else:
-                    st.warning("No output tokens were generated. Check if the training text is sufficient.")
+        if st.session_state.selected_token:
+            next_token_probs = st.session_state.language_model.model[st.session_state.selected_token]
+            if next_token_probs:
+                fig, ax = plt.subplots()
+                tokens, probs = zip(*sorted(next_token_probs.items(), key=lambda x: x[1], reverse=True)[:10])
+                ax.bar(tokens, probs)
+                plt.xticks(rotation=45, ha='right')
+                plt.xlabel("Next Tokens")
+                plt.ylabel("Probability")
+                st.pyplot(fig)
             else:
-                st.warning("Tokenization produced no tokens. Please enter valid text.")
-
-        else:
-            st.warning("Please enter some text to process.")
+                st.write("No next token probabilities available for the selected token.")
 
 if __name__ == "__main__":
     main()
