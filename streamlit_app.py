@@ -33,12 +33,15 @@ class SimpleLanguageModel:
             if not next_token_probs:
                 break
             # Apply temperature
-            next_token_probs = {k: v ** (1 / temperature) for k, v in next_token_probs.items()}
-            total = sum(next_token_probs.values())
-            next_token_probs = {k: v / total for k, v in next_token_probs.items()}
-            next_token = random.choices(list(next_token_probs.keys()), 
-                                        weights=list(next_token_probs.values()))[0]
-            rationale = f"Token: '{next_token}' selected with probabilities {next_token_probs}"
+            adjusted_probs = {k: v ** (1 / temperature) for k, v in next_token_probs.items()}
+            total = sum(adjusted_probs.values())
+            adjusted_probs = {k: v / total for k, v in adjusted_probs.items()}
+            next_token = random.choices(list(adjusted_probs.keys()), 
+                                        weights=list(adjusted_probs.values()))[0]
+            rationale = (
+                f"Token: '{next_token}' selected. Original probabilities: {next_token_probs}. "
+                f"Adjusted probabilities (temperature={temperature}): {adjusted_probs}"
+            )
             result.append({"token": next_token, "rationale": rationale})
             current_token = next_token
         return result
