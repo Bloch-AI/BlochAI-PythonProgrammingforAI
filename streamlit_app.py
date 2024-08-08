@@ -123,6 +123,7 @@ def main():
 
                     # Token probability visualization
                     st.subheader("Token Probability Visualization")
+                    st.write("The token probability visualization shows the likelihood of each possible next token given the current token, based on the training data.")
                     start_token = st.selectbox("Select a token to see next token probabilities:", list(st.session_state.language_model.vocab))
                     next_token_probs = st.session_state.language_model.model[start_token]
                     if next_token_probs:
