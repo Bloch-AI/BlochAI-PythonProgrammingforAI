@@ -27,8 +27,7 @@ class SimpleLanguageModel:
 
     def generate(self, start_token, length=10, temperature=1.0):
         current_token = start_token
-        result = [current_token]
-        rationales = [f"Starting token: '{current_token}'"]
+        result = [{"token": current_token, "rationale": f"Starting token: '{current_token}'"}]
         for _ in range(length - 1):
             next_token_probs = self.model[current_token]
             if not next_token_probs:
@@ -39,11 +38,10 @@ class SimpleLanguageModel:
             next_token_probs = {k: v / total for k, v in next_token_probs.items()}
             next_token = random.choices(list(next_token_probs.keys()), 
                                         weights=list(next_token_probs.values()))[0]
-            result.append(next_token)
             rationale = f"Token: '{next_token}' selected with probabilities {next_token_probs}"
-            rationales.append(rationale)
+            result.append({"token": next_token, "rationale": rationale})
             current_token = next_token
-        return result, rationales
+        return result
 
 def simulate_attention(tokens, output_tokens):
     attention_matrix = [[random.random() for _ in range(len(tokens))] for _ in range(len(output_tokens))]
@@ -90,23 +88,25 @@ def main():
             progress_bar = st.progress(0)
 
             if tokens:
-                output_tokens, rationales = st.session_state.language_model.generate(tokens[0], output_length, temperature)
-                st.write("Generated Output Tokens:", output_tokens)
+                output_with_rationales = st.session_state.language_model.generate(tokens[0], output_length, temperature)
+                st.write("Generated Output Tokens with Rationales:", output_with_rationales)
 
-                if output_tokens:
-                    for i, (token, rationale) in enumerate(zip(output_tokens, rationales)):
-                        output_area.write(f"{token} - {rationale}")
-                        progress_bar.progress((i + 1) / len(output_tokens))
+                if output_with_rationales:
+                    for i, entry in enumerate(output_with_rationales):
+                        token = entry["token"]
+                        rationale = entry["rationale"]
+                        output_area.write(f"{i}: {token} - {rationale}")
+                        progress_bar.progress((i + 1) / len(output_with_rationales))
                         time.sleep(0.2)
 
                     st.success("Processing complete!")
 
                     # Attention visualization
                     st.subheader("Attention Visualization")
-                    attention_matrix = simulate_attention(tokens, output_tokens)
+                    attention_matrix = simulate_attention(tokens, [entry["token"] for entry in output_with_rationales])
                     
                     fig, ax = plt.subplots(figsize=(10, 8))
-                    sns.heatmap(attention_matrix, xticklabels=tokens, yticklabels=output_tokens, ax=ax, cmap="YlOrRd")
+                    sns.heatmap(attention_matrix, xticklabels=tokens, yticklabels=[entry["token"] for entry in output_with_rationales], ax=ax, cmap="YlOrRd")
                     plt.xlabel("Input Tokens")
                     plt.ylabel("Output Tokens")
                     st.pyplot(fig)
