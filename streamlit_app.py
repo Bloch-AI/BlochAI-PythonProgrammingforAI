@@ -154,8 +154,8 @@ def main():
             st.session_state.generated_tokens = [entry["token"] for entry in output_with_rationales]
             st.session_state.generated_sentence = " ".join(st.session_state.generated_tokens)
 
-            # Debugging: Print the model contents
-            print("Model contents:", st.session_state.language_model.model)
+            # Debugging: Use st.write instead of print
+            st.write("Model contents:", st.session_state.language_model.model)
         
     if 'output_with_rationales' in st.session_state:
         st.subheader("LLM Output")
@@ -173,7 +173,7 @@ def main():
         sns.heatmap(attention_matrix, xticklabels=st.session_state.tokens, yticklabels=st.session_state.generated_tokens, ax=ax, cmap="YlOrRd")
         plt.xlabel("Input Tokens")
         plt.ylabel("Output Tokens")
-        st.pyplot(fig)
+        st.pyplot(plt)
 
         st.subheader("Token Probability Visualization")
         st.write("The token probability visualization shows the likelihood of each possible next token given the current token, based on the training data.")
@@ -183,8 +183,8 @@ def main():
         
         st.session_state.selected_token = st.selectbox("Select a token to see next token probabilities:", list(st.session_state.language_model.vocab), index=list(st.session_state.language_model.vocab).index(st.session_state.selected_token) if st.session_state.selected_token else 0)
 
-        # Debugging: Print the selected token and check if it exists in the model
-        print("Selected token:", st.session_state.selected_token)
+        # Debugging: Use st.write instead of print
+        st.write("Selected token:", st.session_state.selected_token)
         
         if st.session_state.selected_token:
             next_token_probs = st.session_state.language_model.model.get((st.session_state.selected_token,), {})
@@ -206,7 +206,7 @@ def main():
                 plt.xlabel("Next Tokens")
                 plt.ylabel("Probability")
                 plt.legend()
-                st.pyplot(fig)
+                st.pyplot(plt)
             else:
                 st.write("No next token probabilities available for the selected token.")
 
