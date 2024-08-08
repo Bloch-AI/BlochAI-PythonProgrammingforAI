@@ -58,7 +58,7 @@ def simulate_attention(tokens, output_tokens):
     return attention_matrix
 
 def main():
-    st.title("Enhanced LLM Demo App")
+    st.title("💻 LLM Simulator App")
 
     # Initialize or load the language model
     if 'language_model' not in st.session_state:
