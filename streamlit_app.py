@@ -83,6 +83,19 @@ class SimpleTransformerBlock(tf.keras.layers.Layer):
         ffn_output = self.dropout2(ffn_output, training=training)
         return self.layernorm2(out1 + ffn_output)
 
+def display_ngrams(model):
+    st.subheader("Learned N-grams")
+    st.write("The following trigrams were learned from the input text:")
+    ngrams = []
+    for (w1, w2), next_words in model.items():
+        for next_word, count in next_words.items():
+            ngrams.append(f"({w1}, {w2}) -> {next_word}: {count} occurrences")
+    
+    if ngrams:
+        st.write("\n".join(ngrams))
+    else:
+        st.write("No n-grams were learned. Please input more text.")
+
 def main():
     st.title("💻 LLM Simulator App")
 
@@ -169,6 +182,9 @@ def main():
                 st.pyplot(fig)
             else:
                 st.write("No next token probabilities available for the selected token.")
+
+        # Display learned n-grams
+        display_ngrams(st.session_state.language_model.model)
 
 if __name__ == "__main__":
     main()
