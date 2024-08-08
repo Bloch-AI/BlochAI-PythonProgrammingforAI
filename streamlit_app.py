@@ -154,8 +154,9 @@ def main():
             st.session_state.generated_tokens = [entry["token"] for entry in output_with_rationales]
             st.session_state.generated_sentence = " ".join(st.session_state.generated_tokens)
 
-            # Debugging: Use st.write instead of print
-            st.write("Model contents:", st.session_state.language_model.model)
+            # Convert tuple keys to strings for display
+            model_display = {str(k): v for k, v in st.session_state.language_model.model.items()}
+            st.write("Model contents:", model_display)
         
     if 'output_with_rationales' in st.session_state:
         st.subheader("LLM Output")
