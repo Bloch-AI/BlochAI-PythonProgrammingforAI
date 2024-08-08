@@ -21,8 +21,9 @@ class SimpleLanguageModel:
         for i in range(len(tokens) - 1):
             self.model[tokens[i]][tokens[i + 1]] += 1
         # Find the token with the most transitions
-        max_transitions_token = max(self.model, key=lambda k: len(self.model[k]))
-        return tokens, max_transitions_token, self.model[max_transitions_token]
+        max_transitions_token = max(self.model, key=lambda k: len(self.model[k]) if self.model[k] else 0)
+        max_transitions = self.model[max_transitions_token]
+        return tokens, max_transitions_token, max_transitions
 
     def generate(self, start_token, length=10, temperature=1.0):
         current_token = start_token
