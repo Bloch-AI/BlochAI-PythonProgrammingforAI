@@ -46,7 +46,7 @@ def simulate_attention(tokens, output_tokens):
     return attention_matrix
 
 def main():
-    st.title("LLM Demo App")
+    st.title("Enhanced LLM Demo App")
 
     # Initialize or load the language model
     if 'language_model' not in st.session_state:
@@ -71,7 +71,7 @@ def main():
 
             # Train the language model
             st.session_state.language_model.train(input_text)
-            st.write("Model:", dict(st.session_state.language_model.model))
+            st.write("Model (after training):", dict(st.session_state.language_model.model))
 
             # Generate output
             st.subheader("LLM Output")
@@ -80,38 +80,42 @@ def main():
 
             if tokens:
                 output_tokens = st.session_state.language_model.generate(tokens[0], output_length, temperature)
-                st.write("Output Tokens:", output_tokens)
-                for i, token in enumerate(output_tokens):
-                    output_area.write(" ".join(output_tokens[:i+1]))
-                    progress_bar.progress((i + 1) / len(output_tokens))
-                    time.sleep(0.2)  # Simulate processing time
+                st.write("Generated Output Tokens:", output_tokens)
 
-                st.success("Processing complete!")
+                if output_tokens:
+                    for i, token in enumerate(output_tokens):
+                        output_area.write(" ".join(output_tokens[:i+1]))
+                        progress_bar.progress((i + 1) / len(output_tokens))
+                        time.sleep(0.2)
 
-                # Attention visualization
-                st.subheader("Attention Visualization")
-                attention_matrix = simulate_attention(tokens, output_tokens)
-                
-                fig, ax = plt.subplots(figsize=(10, 8))
-                sns.heatmap(attention_matrix, xticklabels=tokens, yticklabels=output_tokens, ax=ax, cmap="YlOrRd")
-                plt.xlabel("Input Tokens")
-                plt.ylabel("Output Tokens")
-                st.pyplot(fig)
+                    st.success("Processing complete!")
 
-                # Token probability visualization
-                st.subheader("Token Probability Visualization")
-                start_token = st.selectbox("Select a token to see next token probabilities:", list(st.session_state.language_model.vocab))
-                next_token_probs = st.session_state.language_model.model[start_token]
-                if next_token_probs:
-                    fig, ax = plt.subplots()
-                    tokens, probs = zip(*sorted(next_token_probs.items(), key=lambda x: x[1], reverse=True)[:10])
-                    ax.bar(tokens, probs)
-                    plt.xticks(rotation=45, ha='right')
-                    plt.xlabel("Next Tokens")
-                    plt.ylabel("Probability")
+                    # Attention visualization
+                    st.subheader("Attention Visualization")
+                    attention_matrix = simulate_attention(tokens, output_tokens)
+                    
+                    fig, ax = plt.subplots(figsize=(10, 8))
+                    sns.heatmap(attention_matrix, xticklabels=tokens, yticklabels=output_tokens, ax=ax, cmap="YlOrRd")
+                    plt.xlabel("Input Tokens")
+                    plt.ylabel("Output Tokens")
                     st.pyplot(fig)
+
+                    # Token probability visualization
+                    st.subheader("Token Probability Visualization")
+                    start_token = st.selectbox("Select a token to see next token probabilities:", list(st.session_state.language_model.vocab))
+                    next_token_probs = st.session_state.language_model.model[start_token]
+                    if next_token_probs:
+                        fig, ax = plt.subplots()
+                        tokens, probs = zip(*sorted(next_token_probs.items(), key=lambda x: x[1], reverse=True)[:10])
+                        ax.bar(tokens, probs)
+                        plt.xticks(rotation=45, ha='right')
+                        plt.xlabel("Next Tokens")
+                        plt.ylabel("Probability")
+                        st.pyplot(fig)
+                    else:
+                        st.write("No next token probabilities available for the selected token.")
                 else:
-                    st.write("No next token probabilities available for the selected token.")
+                    st.warning("No output tokens were generated. Check if the training text is sufficient.")
             else:
                 st.warning("Tokenization produced no tokens. Please enter valid text.")
 
