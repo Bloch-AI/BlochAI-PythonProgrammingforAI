@@ -39,8 +39,10 @@ class SimpleLanguageModel:
             next_token = random.choices(list(adjusted_probs.keys()), 
                                         weights=list(adjusted_probs.values()))[0]
             rationale = (
-                f"Token: '{next_token}' selected. Original probabilities: {next_token_probs}. "
-                f"Adjusted probabilities (temperature={temperature}): {adjusted_probs}"
+                f"Token: '{next_token}' selected. "
+                f"Original probabilities: {next_token_probs}. "
+                f"Adjusted probabilities (temperature={temperature}): {adjusted_probs}. "
+                f"Temperature of {temperature} {'flattened' if temperature > 1 else 'sharpened' if temperature < 1 else 'maintained'} the probability distribution."
             )
             result.append({"token": next_token, "rationale": rationale})
             current_token = next_token
