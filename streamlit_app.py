@@ -51,9 +51,10 @@ class SimpleLanguageModel:
 
 def simulate_attention(tokens, output_tokens):
     attention_matrix = [[random.random() for _ in range(len(tokens))] for _ in range(len(output_tokens))]
-    for row in attention_matrix, row_total in zip(attention_matrix, map(sum, attention_matrix)):
+    for row in attention_matrix:
+        total = sum(row)
         for i in range(len(row)):
-            row[i] /= row_total
+            row[i] /= total
     return attention_matrix
 
 def main():
