@@ -7,6 +7,8 @@ from nltk.tokenize import word_tokenize
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import seaborn as sns
+from wordcloud import WordCloud
+import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, LayerNormalization
 
@@ -83,16 +85,41 @@ class SimpleTransformerBlock(tf.keras.layers.Layer):
         ffn_output = self.dropout2(ffn_output, training=training)
         return self.layernorm2(out1 + ffn_output)
 
-def display_ngrams(model):
-    st.subheader("Learned N-grams")
-    st.write("The following trigrams were learned from the input text:")
-    ngrams = []
+def display_ngram_bar_chart(model):
+    st.subheader("N-gram Bar Chart")
+    st.write("The bar chart below shows the frequency of each trigram in the input text.")
+
+    ngram_counts = []
     for (w1, w2), next_words in model.items():
         for next_word, count in next_words.items():
-            ngrams.append(f"({w1}, {w2}) -> {next_word}: {count} occurrences")
+            ngram_counts.append((f"{w1} {w2} {next_word}", count))
     
-    if ngrams:
-        st.write("\n".join(ngrams))
+    if ngram_counts:
+        df = pd.DataFrame(ngram_counts, columns=['N-gram', 'Count'])
+        df = df.sort_values(by='Count', ascending=False).head(10)
+        
+        plt.figure(figsize=(10, 6))
+        sns.barplot(x='Count', y='N-gram', data=df)
+        plt.title('Top 10 N-grams by Frequency')
+        st.pyplot(plt)
+    else:
+        st.write("No n-grams were learned. Please input more text.")
+
+def display_ngram_wordcloud(model):
+    st.subheader("N-gram Word Cloud")
+    st.write("The word cloud below visualizes the n-grams learned from the input text. The size of each n-gram represents its frequency.")
+
+    ngram_counts = defaultdict(int)
+    for (w1, w2), next_words in model.items():
+        for next_word, count in next_words.items():
+            ngram_counts[f"{w1} {w2} {next_word}"] += count
+    
+    if ngram_counts:
+        wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(ngram_counts)
+        plt.figure(figsize=(10, 6))
+        plt.imshow(wordcloud, interpolation="bilinear")
+        plt.axis('off')
+        st.pyplot(plt)
     else:
         st.write("No n-grams were learned. Please input more text.")
 
@@ -183,8 +210,9 @@ def main():
             else:
                 st.write("No next token probabilities available for the selected token.")
 
-        # Display learned n-grams
-        display_ngrams(st.session_state.language_model.model)
+        # Display learned n-grams with visualizations
+        display_ngram_bar_chart(st.session_state.language_model.model)
+        display_ngram_wordcloud(st.session_state.language_model.model)
 
 if __name__ == "__main__":
     main()
