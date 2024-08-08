@@ -90,11 +90,11 @@ def main():
             if tokens:
                 output_with_rationales = st.session_state.language_model.generate(tokens[0], output_length, temperature)
                 generated_tokens = [entry["token"] for entry in output_with_rationales]
-                st.write("Generated Output Tokens:", generated_tokens)
+                generated_sentence = " ".join(generated_tokens)
+                st.write("Generated Output Sentence:", generated_sentence)
 
                 if output_with_rationales:
                     for i, token in enumerate(generated_tokens):
-                        output_area.write(f"{i}: {token}")
                         progress_bar.progress((i + 1) / len(output_with_rationales))
                         time.sleep(0.2)
 
