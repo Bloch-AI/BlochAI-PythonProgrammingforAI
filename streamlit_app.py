@@ -89,24 +89,28 @@ def main():
 
             if tokens:
                 output_with_rationales = st.session_state.language_model.generate(tokens[0], output_length, temperature)
-                st.write("Generated Output Tokens with Rationales:", output_with_rationales)
+                generated_tokens = [entry["token"] for entry in output_with_rationales]
+                st.write("Generated Output Tokens:", generated_tokens)
 
                 if output_with_rationales:
-                    for i, entry in enumerate(output_with_rationales):
-                        token = entry["token"]
-                        rationale = entry["rationale"]
-                        output_area.write(f"{i}: {token} - {rationale}")
+                    for i, token in enumerate(generated_tokens):
+                        output_area.write(f"{i}: {token}")
                         progress_bar.progress((i + 1) / len(output_with_rationales))
                         time.sleep(0.2)
 
                     st.success("Processing complete!")
 
+                    # Display rationale for each token in an expandable section
+                    with st.expander("Output Tokens with Rationales", expanded=True):
+                        for i, entry in enumerate(output_with_rationales):
+                            st.write(f"{i}: {entry['token']} - {entry['rationale']}")
+
                     # Attention visualization
                     st.subheader("Attention Visualization")
-                    attention_matrix = simulate_attention(tokens, [entry["token"] for entry in output_with_rationales])
+                    attention_matrix = simulate_attention(tokens, generated_tokens)
                     
                     fig, ax = plt.subplots(figsize=(10, 8))
-                    sns.heatmap(attention_matrix, xticklabels=tokens, yticklabels=[entry["token"] for entry in output_with_rationales], ax=ax, cmap="YlOrRd")
+                    sns.heatmap(attention_matrix, xticklabels=tokens, yticklabels=generated_tokens, ax=ax, cmap="YlOrRd")
                     plt.xlabel("Input Tokens")
                     plt.ylabel("Output Tokens")
                     st.pyplot(fig)
