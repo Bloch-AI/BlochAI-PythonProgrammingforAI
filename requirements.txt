@@ -3,3 +3,5 @@ nltk
 matplotlib
 seaborn
 tensorflow
+wordcloud
+pandas
