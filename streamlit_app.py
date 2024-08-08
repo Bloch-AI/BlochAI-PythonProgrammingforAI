@@ -28,18 +28,22 @@ class SimpleLanguageModel:
     def generate(self, start_token, length=10, temperature=1.0):
         current_token = start_token
         result = [current_token]
+        rationales = [f"Starting token: '{current_token}'"]
         for _ in range(length - 1):
             next_token_probs = self.model[current_token]
             if not next_token_probs:
                 break
+            # Apply temperature
             next_token_probs = {k: v ** (1 / temperature) for k, v in next_token_probs.items()}
             total = sum(next_token_probs.values())
             next_token_probs = {k: v / total for k, v in next_token_probs.items()}
             next_token = random.choices(list(next_token_probs.keys()), 
                                         weights=list(next_token_probs.values()))[0]
             result.append(next_token)
+            rationale = f"Token: '{next_token}' selected with probabilities {next_token_probs}"
+            rationales.append(rationale)
             current_token = next_token
-        return result
+        return result, rationales
 
 def simulate_attention(tokens, output_tokens):
     attention_matrix = [[random.random() for _ in range(len(tokens))] for _ in range(len(output_tokens))]
@@ -86,12 +90,12 @@ def main():
             progress_bar = st.progress(0)
 
             if tokens:
-                output_tokens = st.session_state.language_model.generate(tokens[0], output_length, temperature)
+                output_tokens, rationales = st.session_state.language_model.generate(tokens[0], output_length, temperature)
                 st.write("Generated Output Tokens:", output_tokens)
 
                 if output_tokens:
-                    for i, token in enumerate(output_tokens):
-                        output_area.write(" ".join(output_tokens[:i+1]))
+                    for i, (token, rationale) in enumerate(zip(output_tokens, rationales)):
+                        output_area.write(f"{token} - {rationale}")
                         progress_bar.progress((i + 1) / len(output_tokens))
                         time.sleep(0.2)
 
