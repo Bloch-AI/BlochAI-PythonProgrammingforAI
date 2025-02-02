@@ -4,8 +4,8 @@ import random
 import numpy as np
 
 # -----------------------------------------------------------------------------
-# Use a simple rule-based tokenizer from NLTK that does not require extra downloads.
-# This avoids the need for the Punkt data.
+# We use a simple rule-based tokenizer from NLTK that does not require extra downloads.
+# This avoids the dependency on additional data (like the Punkt tokenizer).
 from nltk.tokenize import TreebankWordTokenizer
 tokenizer = TreebankWordTokenizer()
 
@@ -25,7 +25,7 @@ from sklearn.decomposition import PCA
 def load_embeddings(vocab):
     """
     For each unique word in the vocabulary, generate a random 50-dimensional vector.
-    In a real LLM, these would be pre-trained embeddings.
+    (In real LLMs these would be pre-trained embeddings.)
     """
     embeddings = {}
     for word in vocab:
@@ -34,22 +34,23 @@ def load_embeddings(vocab):
 
 class SimpleLanguageModel:
     """
-    A very basic language model based on trigrams (groups of three words). It learns
-    which word tends to follow a given pair of words from the training text.
+    A very basic language model based on trigrams (groups of three words).  
+    It learns which word tends to follow a given pair of words from the training text.
     """
     def __init__(self):
-        # For each two-word tuple, we count how often each third word follows.
+        # For each two-word tuple, count how often each third word follows.
         self.model = defaultdict(lambda: defaultdict(int))
         self.vocab = set()
 
     def train(self, text):
         """
         Tokenises the input text (converted to lower case) and builds a trigram model.
+        The model learns counts for each sequence of three words.
         """
         # Tokenise the text using our simple tokenizer.
         tokens = tokenizer.tokenize(text.lower())
         self.vocab.update(tokens)
-        # Build the trigram counts.
+        # Build trigram counts: for every two consecutive tokens, count the third token.
         for i in range(len(tokens) - 2):
             self.model[(tokens[i], tokens[i + 1])][tokens[i + 2]] += 1
         # Generate random embeddings for demonstration.
@@ -59,25 +60,32 @@ class SimpleLanguageModel:
     def generate(self, start_tokens, length=10, temperature=1.0):
         """
         Starting with a two-word context, generate additional tokens based on the
-        learned trigram probabilities. The 'temperature' parameter adjusts randomness.
+        learned trigram probabilities.
+        
+        Note:
+          - This simple model only uses the last two tokens to predict the next word.
+          - The 'temperature' parameter adjusts randomness:
+              * Lower temperature → more predictable (greedy) choices.
+              * Higher temperature → more random selections.
         """
         current_tokens = start_tokens.copy()
+        # Record each token and the rationale for its selection.
         result = [{"token": token, "rationale": f"Starting token: '{token}'"} for token in current_tokens]
         for _ in range(length - len(start_tokens)):
             next_token_probs = self.model[(current_tokens[-2], current_tokens[-1])]
             if not next_token_probs:
-                # If the current two-word context was never seen in training, stop generation.
+                # If this two-word context was never seen, stop generating.
                 break
-            # Adjust probabilities by temperature.
+            # Adjust probabilities using the temperature.
             adjusted_probs = {k: v ** (1 / temperature) for k, v in next_token_probs.items()}
             total = sum(adjusted_probs.values())
             adjusted_probs = {k: v / total for k, v in adjusted_probs.items()}
-            # Randomly choose the next token.
+            # Choose the next token randomly based on the adjusted probabilities.
             next_token = random.choices(list(adjusted_probs.keys()), weights=list(adjusted_probs.values()))[0]
             rationale = (
                 f"Token '{next_token}' was chosen because, in the training text, it followed "
-                f"the sequence '{current_tokens[-2]} {current_tokens[-1]}'. "
-                f"(Original frequencies: {next_token_probs}, adjusted for temperature: {adjusted_probs})"
+                f"the sequence '{current_tokens[-2]} {current_tokens[-1]}'.\n"
+                f"(Original frequencies: {next_token_probs}, adjusted: {adjusted_probs})"
             )
             result.append({"token": next_token, "rationale": rationale})
             current_tokens.append(next_token)
@@ -85,7 +93,7 @@ class SimpleLanguageModel:
 
 def simulate_attention(input_tokens, output_tokens):
     """
-    Simulate an attention matrix (as used in Transformer models) using random values.
+    Simulate an 'attention' matrix (as used in Transformer models) using random values.
     Each row is normalised to sum to 1.
     """
     attention_matrix = [
@@ -101,7 +109,7 @@ def simulate_attention(input_tokens, output_tokens):
 class SimpleTransformerBlock(tf.keras.layers.Layer):
     """
     A simplified Transformer block that applies multi-head self-attention and a feed-forward
-    network. This is only for illustration purposes.
+    network. This is solely for demonstration and does not reflect full Transformer complexity.
     """
     def __init__(self, embed_dim, num_heads, ff_dim, rate=0.1):
         super(SimpleTransformerBlock, self).__init__()
@@ -146,7 +154,8 @@ def display_ngram_bar_chart(model):
 
 def display_ngram_wordcloud(model):
     """
-    Show a word cloud of the trigrams learned from the training text. Larger text indicates higher frequency.
+    Show a word cloud of the trigrams learned from the training text.
+    Larger words indicate higher frequency.
     """
     st.subheader("Step 4: Trigram Word Cloud")
     st.write("The word cloud below shows the trigrams learned from your training text. Bigger words indicate a higher frequency.")
@@ -170,17 +179,30 @@ def display_ngram_wordcloud(model):
 
 def main():
     st.title("💻 LLM Simulator App (UK English)")
-    st.write(
+    st.markdown(
         """
         **Welcome!**  
         This educational app demonstrates, in a simplified way, how a large language model (LLM) works.  
         
-        **Step 1:** Enter training text.  
-        **Step 2:** The model learns patterns from your text (using groups of three words).  
-        **Step 3:** You can view visualisations of what the model has learnt.  
-        **Step 4:** Ask a question (prompt) and the model will generate an answer based on its learning.
+        **Overview:**  
+        1. **Training:** Enter training text. The model learns word patterns by counting groups of three words (trigrams).  
+        2. **Visualisation:** View charts and a word cloud showing which trigrams are most common.  
+        3. **Question Answering:** Ask a question (prompt) and see how the model generates an answer based on its limited learning.
         
-        *Note:* In real life, LLMs are very complex. This demo uses a simple trigram model for clarity.
+        **Important Notes:**  
+        - This is a very simplified model. Real LLMs use much more context and complex methods.  
+        - The model only uses the first **two words** of your question as its starting point.
+        - For example, if you train the model on the text:  
+          > "My father’s family name being Pirrip, and my Christian name Philip, ..."  
+          and then ask: **"My father’s family name being?"**,  
+          the model will only see the context `["my", "father’s"]` and generate the next words based solely on that.
+        - As a result, even though the correct surname is **Pirrip**, the model might not output that because it never sees the full context.  
+          It might instead output something like "gave me a most tremendous dip..." if that sequence was more frequent.
+        
+        **How to Improve the Results:**  
+        - Provide more training data or longer training text.  
+        - Use a longer prompt that includes more context (for example, "family name being").  
+        - Understand that the model’s output is partly random and limited by its simple trigram approach.
         """
     )
 
@@ -188,7 +210,7 @@ def main():
     # STEP 1: Input Training Text
     # --------------------------------------------------------------------------
     st.header("Step 1: Enter Training Text")
-    st.write("Please enter some text below. The model will use this text to learn word patterns (in UK English).")
+    st.write("Please enter some training text below. The model will use this text (in UK English) to learn word patterns.")
     input_text = st.text_area("Training Text", height=150)
 
     if st.button("Train Model"):
@@ -203,7 +225,7 @@ def main():
             st.session_state.embeddings = embeddings
 
             st.success("Training complete! The model has learned from your text.")
-            st.write("For example, it has learnt these words and trigram patterns:")
+            st.write("For example, it has learnt these trigram patterns:")
             model_display = {str(k): dict(v) for k, v in st.session_state.language_model.model.items()}
             st.json(model_display)
 
@@ -234,14 +256,13 @@ def main():
                 # Use the first two tokens of the prompt as the starting context.
                 start_tokens = prompt_tokens[:2]
                 st.write(f"Using the starting context: {start_tokens}")
-                # Generate an answer. (Here we attempt to generate 20 tokens.)
+                # Generate an answer (here we generate 20 tokens).
                 output_with_rationales = st.session_state.language_model.generate(start_tokens, length=20, temperature=1.0)
                 generated_tokens = [entry["token"] for entry in output_with_rationales]
-                # If no additional tokens were generated, explain why.
                 if len(generated_tokens) <= 2:
                     st.error("The model could not generate an answer. "
                              "This may be because the training text does not provide enough context for the given prompt. "
-                             "Please try training the model with more detailed text.")
+                             "Please try training the model with more detailed text or use a longer prompt.")
                 else:
                     answer = " ".join(generated_tokens)
                     st.subheader("Answer")
@@ -249,6 +270,20 @@ def main():
                     with st.expander("See How the Answer Was Generated (Step-by-Step)"):
                         for i, entry in enumerate(output_with_rationales):
                             st.write(f"{i}: **{entry['token']}** — {entry['rationale']}")
+                    with st.expander("Why Might the Answer Seem Nonsense?"):
+                        st.markdown(
+                            """
+                            **Explanation:**  
+                            - The model only uses the first two words of your question as context.  
+                            - In our training text, after the context `['my', 'father’s']`, the model may have learned that other words (like "gave" or "family") were more frequent than "pirrip".  
+                            - Thus, even though the correct surname is **Pirrip**, the model does not have enough context to generate it.  
+                            - This is because a real LLM would use many more words of context and have been trained on vast amounts of data.  
+                            - To improve the output, try:  
+                               1. Providing a larger, more detailed training text.  
+                               2. Using a longer prompt that includes more context (for example, "family name being").  
+                               3. Understanding that this trigram model is a very simplified demonstration.
+                            """
+                        )
 
     # --------------------------------------------------------------------------
     # Advanced Visualisations (Optional)
@@ -260,21 +295,24 @@ def main():
             "The heatmap below simulates how each generated word 'attends' to the training text. "
             "Darker colours indicate stronger connections."
         )
-        attention_matrix = simulate_attention(st.session_state.tokens, st.session_state.generated_tokens)
-        fig, ax = plt.subplots(figsize=(10, 8))
-        sns.heatmap(attention_matrix,
-                    xticklabels=st.session_state.tokens,
-                    yticklabels=st.session_state.generated_tokens,
-                    ax=ax, cmap="YlOrRd")
-        plt.xlabel("Training Text Tokens")
-        plt.ylabel("Generated Answer Tokens")
-        st.pyplot(plt)
-        plt.clf()
+        # Check that generated_tokens exists in session state (from a previous answer).
+        if 'generated_tokens' in st.session_state:
+            attention_matrix = simulate_attention(st.session_state.tokens, st.session_state.generated_tokens)
+            fig, ax = plt.subplots(figsize=(10, 8))
+            sns.heatmap(attention_matrix,
+                        xticklabels=st.session_state.tokens,
+                        yticklabels=st.session_state.generated_tokens,
+                        ax=ax, cmap="YlOrRd")
+            plt.xlabel("Training Text Tokens")
+            plt.ylabel("Generated Answer Tokens")
+            st.pyplot(plt)
+            plt.clf()
 
         st.subheader("Transformer Block Simulation")
         st.write(
             "A Transformer block processes word embeddings to produce new representations. "
-            "Below, PCA is used to reduce the dimensions of the original and transformed embeddings so you can see the difference."
+            "Below, PCA is used to reduce the dimensions of the original and transformed embeddings "
+            "so you can see the difference."
         )
         tokens = st.session_state.tokens
         embeddings = st.session_state.embeddings
