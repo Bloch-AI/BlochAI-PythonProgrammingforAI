@@ -1,3 +1,4 @@
+# --- NLTK Configuration: Must be at the very top! ---
 import os
 
 # Set NLTK data directory to a writable location.
@@ -7,112 +8,103 @@ os.environ['NLTK_DATA'] = '/tmp/nltk_data'
 if not os.path.exists('/tmp/nltk_data'):
     os.makedirs('/tmp/nltk_data')
 
-# Import nltk and update its data search path.
+# Import nltk and set its data path.
 import nltk
 nltk.data.path.insert(0, '/tmp/nltk_data')
 
-# (Optional) Print the current nltk.data paths for debugging.
-print("NLTK data paths:", nltk.data.path)
+# Download the 'punkt' resource into the specified directory.
+nltk.download('punkt', download_dir='/tmp/nltk_data', quiet=True)
 
-# Download the 'punkt' resource into our writable directory.
-nltk.download('punkt', download_dir='/tmp/nltk_data', quiet=False)
-
-# (Optional) Verify that 'punkt' is now available.
-try:
-    nltk.data.find('tokenizers/punkt')
-    print("Punkt tokenizer found.")
-except LookupError:
-    print("Punkt tokenizer not found!")
-
-
-
-import streamlit as st  # Importing Streamlit for building the web app
-import time  # Importing time for potential future use (not used here)
-import random  # Importing random for generating random numbers and choices
-import numpy as np  # Importing numpy for numerical operations
+# --- Now proceed with the rest of the imports ---
+import streamlit as st
+import time
+import random
+import numpy as np
 from nltk.tokenize import word_tokenize
-# Explicitly specify language, though the default should be English.
-tokens = word_tokenize(text.lower(), language="english")
+from collections import defaultdict
+import matplotlib.pyplot as plt
+import seaborn as sns
+from wordcloud import WordCloud
+import pandas as pd
+import tensorflow as tf
+from tensorflow.keras.layers import Dense, LayerNormalization
+from sklearn.decomposition import PCA
 
-from collections import defaultdict  # For dictionaries with default values
-import matplotlib.pyplot as plt  # For plotting charts and graphs
-import seaborn as sns  # For enhancing plot styles
-from wordcloud import WordCloud  # For generating word cloud visualizations
-import pandas as pd  # For data manipulation
-import tensorflow as tf  # For deep learning operations
-from tensorflow.keras.layers import Dense, LayerNormalization  # For building neural network layers
-from sklearn.decomposition import PCA  # For dimensionality reduction in visualization
-# Function to load (or simulate) pre-trained word embeddings.
+# --- Helper Functions and Classes ---
+
 def load_embeddings(vocab):
+    """
+    Generate random 50-dimensional embeddings for each word in the vocabulary.
+    """
     embeddings = {}
     for word in vocab:
-        embeddings[word] = np.random.rand(50)  # 50-dimensional random vector
+        embeddings[word] = np.random.rand(50)
     return embeddings
 
-# A simple trigram language model.
 class SimpleLanguageModel:
     def __init__(self):
-        # The model uses a nested defaultdict to count the occurrences of each trigram.
+        # Using a nested defaultdict to count trigram occurrences.
         self.model = defaultdict(lambda: defaultdict(int))
-        self.vocab = set()  # The vocabulary of unique words
+        self.vocab = set()
 
     def train(self, text):
-        # Tokenize the text into lowercase words.
-        tokens = word_tokenize(text.lower())
+        """
+        Tokenizes the input text and builds a trigram model.
+        """
+        # Tokenize the input text into lowercase words, explicitly using English.
+        tokens = word_tokenize(text.lower(), language="english")
         self.vocab.update(tokens)
         # Build trigrams from the tokens.
         for i in range(len(tokens) - 2):
             self.model[(tokens[i], tokens[i + 1])][tokens[i + 2]] += 1
-        # Create embeddings for all unique words.
+        # Generate embeddings for the vocabulary.
         embeddings = load_embeddings(self.vocab)
         return tokens, embeddings
 
     def generate(self, start_tokens, length=10, temperature=1.0):
+        """
+        Generates a sequence of tokens based on the trigram probabilities.
+        """
         current_tokens = start_tokens.copy()
-        # Record the starting tokens with a simple rationale.
         result = [{"token": token, "rationale": f"Starting token: '{token}'"} for token in current_tokens]
-        # Generate new tokens until reaching the desired length.
         for _ in range(length - len(start_tokens)):
-            # Get next-token probabilities using the last two tokens as context.
             next_token_probs = self.model[(current_tokens[-2], current_tokens[-1])]
             if not next_token_probs:
-                break  # No next token found for this context.
-            # Adjust probabilities with temperature (higher temperature = more randomness).
+                break
+            # Adjust probabilities with temperature.
             adjusted_probs = {k: v ** (1 / temperature) for k, v in next_token_probs.items()}
             total = sum(adjusted_probs.values())
             adjusted_probs = {k: v / total for k, v in adjusted_probs.items()}
-            # Randomly choose the next token based on adjusted probabilities.
+            # Choose the next token.
             next_token = random.choices(list(adjusted_probs.keys()), weights=list(adjusted_probs.values()))[0]
             rationale = (
                 f"Token: '{next_token}' selected. "
                 f"Original probabilities: {next_token_probs}. "
                 f"Adjusted probabilities (temperature={temperature}): {adjusted_probs}. "
-                f"Temperature of {temperature} {'flattened' if temperature > 1 else 'sharpened' if temperature < 1 else 'maintained'} the probability distribution."
+                f"Temperature of {temperature} {'flattened' if temperature > 1 else 'sharpened' if temperature < 1 else 'maintained'} the distribution."
             )
             result.append({"token": next_token, "rationale": rationale})
             current_tokens.append(next_token)
         return result
 
-# Function to simulate an attention matrix between input and output tokens.
 def simulate_attention(input_tokens, output_tokens):
+    """
+    Simulates an attention matrix with random values and normalizes each row.
+    """
     attention_matrix = [
         [random.random() for _ in range(len(input_tokens))]
         for _ in range(len(output_tokens))
     ]
-    # Normalize each row to sum to 1.
     for row in attention_matrix:
         total = sum(row)
         for i in range(len(row)):
             row[i] /= total
     return attention_matrix
 
-# A custom, simplified Transformer block.
 class SimpleTransformerBlock(tf.keras.layers.Layer):
     def __init__(self, embed_dim, num_heads, ff_dim, rate=0.1):
         super(SimpleTransformerBlock, self).__init__()
-        # Multi-head self-attention layer.
         self.att = tf.keras.layers.MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
-        # Feed-forward network with one hidden layer.
         self.ffn = tf.keras.Sequential([
             Dense(ff_dim, activation="relu"),
             Dense(embed_dim),
@@ -130,20 +122,19 @@ class SimpleTransformerBlock(tf.keras.layers.Layer):
         ffn_output = self.dropout2(ffn_output, training=training)
         return self.layernorm2(out1 + ffn_output)
 
-# Display the top 10 trigrams in a bar chart.
 def display_ngram_bar_chart(model):
+    """
+    Displays a bar chart of the top 10 most frequent trigrams.
+    """
     st.subheader("N-gram Bar Chart")
-    st.write("The bar chart below shows the frequency of each trigram (three-word sequence) learned from the input text.")
-    
+    st.write("This bar chart shows the frequency of each trigram (three-word sequence) learned from the input text.")
     ngram_counts = []
     for (w1, w2), next_words in model.items():
         for next_word, count in next_words.items():
             ngram_counts.append((f"{w1} {w2} {next_word}", count))
-    
     if ngram_counts:
         df = pd.DataFrame(ngram_counts, columns=['N-gram', 'Count'])
         df = df.sort_values(by='Count', ascending=False).head(10)
-        
         plt.figure(figsize=(10, 6))
         sns.barplot(x='Count', y='N-gram', data=df)
         plt.title('Top 10 N-grams by Frequency')
@@ -152,16 +143,16 @@ def display_ngram_bar_chart(model):
     else:
         st.write("No n-grams were learned. Please input more text.")
 
-# Display a word cloud for the learned trigrams.
 def display_ngram_wordcloud(model):
+    """
+    Displays a word cloud visualization of the learned trigrams.
+    """
     st.subheader("N-gram Word Cloud")
-    st.write("The word cloud visualizes the n-grams learned from the input text. Larger sizes indicate higher frequency.")
-    
+    st.write("This word cloud visualizes the n-grams learned from the input text. Larger sizes indicate higher frequency.")
     ngram_counts = defaultdict(int)
     for (w1, w2), next_words in model.items():
         for next_word, count in next_words.items():
             ngram_counts[f"{w1} {w2} {next_word}"] += count
-    
     if ngram_counts:
         wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(ngram_counts)
         plt.figure(figsize=(10, 6))
@@ -172,7 +163,8 @@ def display_ngram_wordcloud(model):
     else:
         st.write("No n-grams were learned. Please input more text.")
 
-# Main function to run the Streamlit app.
+# --- Main Function for the Streamlit App ---
+
 def main():
     st.title("💻 LLM Simulator App")
     st.write(
@@ -180,12 +172,10 @@ def main():
         This app simulates the workings of a large language model (LLM) by:
         
         - **Training** on your input text (using a simple trigram model).
-        - **Generating** text with a rationale for each choice.
+        - **Generating** text with a rationale for each token selection.
         - **Visualizing** token-level attention.
         - **Displaying** next-token probability distributions.
-        - **Simulating** a Transformer block to show how token embeddings change.
-        
-        Enjoy exploring the internals of an LLM!
+        - **Simulating** a Transformer block to show how token embeddings are transformed.
         """
     )
 
@@ -206,27 +196,24 @@ def main():
     # Process the input text when the button is pressed.
     if st.button("Process"):
         if input_text:
-            # Train the model and obtain tokens and embeddings.
             tokens, embeddings = st.session_state.language_model.train(input_text)
             st.session_state.tokens = tokens
             st.session_state.embeddings = embeddings
-
-            # For generation, use the first two tokens as the starting context.
             if len(tokens) < 2:
                 st.error("Please enter more text to form a valid context.")
             else:
-                start_tokens = tokens[:2]
+                start_tokens = tokens[:2]  # Use the first two tokens as context.
                 output_with_rationales = st.session_state.language_model.generate(start_tokens, output_length, temperature)
                 st.session_state.output_with_rationales = output_with_rationales
                 st.session_state.generated_tokens = [entry["token"] for entry in output_with_rationales]
                 st.session_state.generated_sentence = " ".join(st.session_state.generated_tokens)
-                # For debugging/education, display the underlying model counts.
+                # For transparency, display the learned trigram model.
                 model_display = {str(k): dict(v) for k, v in st.session_state.language_model.model.items()}
                 st.write("Learned trigram model:", model_display)
         else:
             st.warning("Please enter some text to process.")
 
-    # If generation is complete, show outputs and visualizations.
+    # Display outputs if available.
     if 'output_with_rationales' in st.session_state:
         st.subheader("LLM Generated Output")
         st.write("**Generated Sentence:**", st.session_state.generated_sentence)
@@ -234,10 +221,9 @@ def main():
         with st.expander("Output Tokens with Rationales", expanded=True):
             for i, entry in enumerate(st.session_state.output_with_rationales):
                 st.write(f"{i}: **{entry['token']}** — {entry['rationale']}")
-
-        # Attention Visualization: How each generated token "attends" to the input tokens.
+        
         st.subheader("Attention Visualization")
-        st.write("This heatmap shows simulated attention scores between each output token and each input token.")
+        st.write("The heatmap below shows simulated attention scores between each output token and each input token.")
         attention_matrix = simulate_attention(st.session_state.tokens, st.session_state.generated_tokens)
         fig, ax = plt.subplots(figsize=(10, 8))
         sns.heatmap(attention_matrix, 
@@ -249,28 +235,20 @@ def main():
         st.pyplot(plt)
         plt.clf()
 
-        # Token Probability Visualization:
         st.subheader("Token Probability Visualization")
-        st.write(
-            "Select a context (two consecutive tokens) from the model to view the original and temperature-adjusted "
-            "probability distributions for the next token."
-        )
+        st.write("Select a two-token context to view the original and adjusted probability distributions for the next token.")
         contexts = list(st.session_state.language_model.model.keys())
         if contexts:
-            # Create a string representation for each context.
             context_options = [' '.join(context) for context in contexts]
             selected_context_str = st.selectbox("Select a two-token context:", context_options)
             selected_context = tuple(selected_context_str.split())
-            st.write("**Selected context:**", selected_context_str)
+            st.write("Selected context:", selected_context_str)
             next_token_probs = st.session_state.language_model.model[selected_context]
-            # Adjust probabilities based on the temperature.
             adjusted_probs = {k: v ** (1 / temperature) for k, v in next_token_probs.items()}
             total = sum(adjusted_probs.values())
             adjusted_probs = {k: v / total for k, v in adjusted_probs.items()}
-
             if next_token_probs:
                 fig, ax = plt.subplots(figsize=(10, 6))
-                # Show the top 10 probabilities.
                 sorted_probs = sorted(next_token_probs.items(), key=lambda x: x[1], reverse=True)[:10]
                 tokens_list, probs = zip(*sorted_probs)
                 sorted_adj = sorted(adjusted_probs.items(), key=lambda x: x[1], reverse=True)[:10]
@@ -288,27 +266,24 @@ def main():
             else:
                 st.write("No next token probabilities available for the selected context.")
         else:
-            st.write("No two-token contexts available. Please input more text.")
+            st.write("No valid two-token contexts found. Please input more text.")
 
-        # Transformer Block Simulation:
+        # Transformer Block Simulation
         if 'embeddings' in st.session_state and 'tokens' in st.session_state and len(st.session_state.tokens) > 0:
             st.subheader("Transformer Block Simulation")
             st.write(
                 "A simple Transformer block processes token embeddings to produce new representations. "
-                "Below we use PCA to reduce both the original and transformed embeddings to 2 dimensions for visualization."
+                "Below we use PCA to reduce the original and transformed embeddings to 2 dimensions for visualization."
             )
             tokens = st.session_state.tokens
             embeddings = st.session_state.embeddings
-            # Build an embedding matrix for the input tokens (in order).
             embedding_matrix = np.array([embeddings[token] for token in tokens])
-            # Add a batch dimension for the Transformer block: shape (1, seq_len, embed_dim)
+            # Add a batch dimension for the Transformer block (shape: 1 x seq_len x embed_dim)
             embedding_matrix_batch = np.expand_dims(embedding_matrix, axis=0)
-            # Create and apply a simple Transformer block.
             transformer_block = SimpleTransformerBlock(embed_dim=50, num_heads=2, ff_dim=64)
             transformed_embeddings = transformer_block(embedding_matrix_batch, training=False)
-            # Remove the batch dimension.
             transformed_embeddings = transformed_embeddings.numpy().squeeze(0)
-            # Combine original and transformed embeddings to compute a common PCA projection.
+            # Combine original and transformed embeddings for PCA.
             combined = np.concatenate([embedding_matrix, transformed_embeddings], axis=0)
             pca = PCA(n_components=2)
             combined_2d = pca.fit_transform(combined)
@@ -327,11 +302,11 @@ def main():
             st.pyplot(plt)
             plt.clf()
 
-# Run the main function to start the app.
+# --- Run the App ---
 if __name__ == "__main__":
     main()
 
-# Footer at the bottom of the app.
+# --- Footer ---
 footer = st.container()
 footer.markdown(
     '''
