@@ -1,7 +1,9 @@
 streamlit
+numpy
 nltk
 matplotlib
 seaborn
-tensorflow
 wordcloud
 pandas
+tensorflow
+scikit-learn
