@@ -3,10 +3,21 @@ import time  # Importing time for potential future use (not used here)
 import random  # Importing random for generating random numbers and choices
 import numpy as np  # Importing numpy for numerical operations
 import os
+
+# Set NLTK_DATA to a writable directory
 os.environ['NLTK_DATA'] = '/tmp/nltk_data'
 
 import nltk
-nltk.download('punkt', quiet=True)
+
+# Ensure the download directory exists (optional but good practice)
+if not os.path.exists('/tmp/nltk_data'):
+    os.makedirs('/tmp/nltk_data')
+
+# Download the 'punkt' tokenizer to the specified directory
+nltk.download('punkt', download_dir='/tmp/nltk_data', quiet=True)
+
+# Append the download directory to NLTK's data search paths
+nltk.data.path.append('/tmp/nltk_data')
 
 
 from nltk.tokenize import word_tokenize  # To split text into words
