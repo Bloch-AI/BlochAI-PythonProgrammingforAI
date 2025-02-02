@@ -1,26 +1,13 @@
-# --- NLTK Configuration: Must be at the very top! ---
-import os
-
-# Set NLTK data directory to a writable location.
-os.environ['NLTK_DATA'] = '/tmp/nltk_data'
-
-# Create the directory if it doesn't exist.
-if not os.path.exists('/tmp/nltk_data'):
-    os.makedirs('/tmp/nltk_data')
-
-# Import nltk and set its data path.
-import nltk
-nltk.data.path.insert(0, '/tmp/nltk_data')
-
-# Download the 'punkt' resource into the specified directory.
-nltk.download('punkt', download_dir='/tmp/nltk_data', quiet=True)
-
-# --- Now proceed with the rest of the imports ---
 import streamlit as st
 import time
 import random
 import numpy as np
-from nltk.tokenize import word_tokenize
+
+# Use TreebankWordTokenizer instead of word_tokenize to avoid needing the 'punkt' resource.
+from nltk.tokenize import TreebankWordTokenizer
+# Create a global tokenizer instance.
+tokenizer = TreebankWordTokenizer()
+
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -30,7 +17,9 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, LayerNormalization
 from sklearn.decomposition import PCA
 
-# --- Helper Functions and Classes ---
+# -----------------------------------------------------------------------------
+# Helper Functions and Classes
+# -----------------------------------------------------------------------------
 
 def load_embeddings(vocab):
     """
@@ -51,8 +40,8 @@ class SimpleLanguageModel:
         """
         Tokenizes the input text and builds a trigram model.
         """
-        # Tokenize the input text into lowercase words, explicitly using English.
-        tokens = word_tokenize(text.lower(), language="english")
+        # Tokenize using the TreebankWordTokenizer (no external data needed).
+        tokens = tokenizer.tokenize(text.lower())
         self.vocab.update(tokens)
         # Build trigrams from the tokens.
         for i in range(len(tokens) - 2):
@@ -75,7 +64,6 @@ class SimpleLanguageModel:
             adjusted_probs = {k: v ** (1 / temperature) for k, v in next_token_probs.items()}
             total = sum(adjusted_probs.values())
             adjusted_probs = {k: v / total for k, v in adjusted_probs.items()}
-            # Choose the next token.
             next_token = random.choices(list(adjusted_probs.keys()), weights=list(adjusted_probs.values()))[0]
             rationale = (
                 f"Token: '{next_token}' selected. "
@@ -163,7 +151,9 @@ def display_ngram_wordcloud(model):
     else:
         st.write("No n-grams were learned. Please input more text.")
 
-# --- Main Function for the Streamlit App ---
+# -----------------------------------------------------------------------------
+# Main Function for the Streamlit App
+# -----------------------------------------------------------------------------
 
 def main():
     st.title("💻 LLM Simulator App")
@@ -217,18 +207,18 @@ def main():
     if 'output_with_rationales' in st.session_state:
         st.subheader("LLM Generated Output")
         st.write("**Generated Sentence:**", st.session_state.generated_sentence)
-        
+
         with st.expander("Output Tokens with Rationales", expanded=True):
             for i, entry in enumerate(st.session_state.output_with_rationales):
                 st.write(f"{i}: **{entry['token']}** — {entry['rationale']}")
-        
+
         st.subheader("Attention Visualization")
         st.write("The heatmap below shows simulated attention scores between each output token and each input token.")
         attention_matrix = simulate_attention(st.session_state.tokens, st.session_state.generated_tokens)
         fig, ax = plt.subplots(figsize=(10, 8))
-        sns.heatmap(attention_matrix, 
-                    xticklabels=st.session_state.tokens, 
-                    yticklabels=st.session_state.generated_tokens, 
+        sns.heatmap(attention_matrix,
+                    xticklabels=st.session_state.tokens,
+                    yticklabels=st.session_state.generated_tokens,
                     ax=ax, cmap="YlOrRd")
         plt.xlabel("Input Tokens")
         plt.ylabel("Output Tokens")
@@ -289,7 +279,7 @@ def main():
             combined_2d = pca.fit_transform(combined)
             original_2d = combined_2d[:len(tokens)]
             transformed_2d = combined_2d[len(tokens):]
-            
+
             fig, ax = plt.subplots(figsize=(10, 6))
             ax.scatter(original_2d[:, 0], original_2d[:, 1], color='blue', label='Original Embeddings')
             for i, token in enumerate(tokens):
@@ -302,11 +292,12 @@ def main():
             st.pyplot(plt)
             plt.clf()
 
-# --- Run the App ---
 if __name__ == "__main__":
     main()
 
-# --- Footer ---
+# -----------------------------------------------------------------------------
+# Footer
+# -----------------------------------------------------------------------------
 footer = st.container()
 footer.markdown(
     '''
@@ -328,3 +319,4 @@ footer.markdown(
     ''',
     unsafe_allow_html=True
 )
+
