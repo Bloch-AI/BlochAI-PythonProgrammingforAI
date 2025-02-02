@@ -1,9 +1,7 @@
 import streamlit as st
-import time
 import random
 import numpy as np
 import pandas as pd
-import plotly.express as px
 from nltk.tokenize import TreebankWordTokenizer
 from collections import defaultdict
 import matplotlib.pyplot as plt
@@ -43,12 +41,15 @@ st.markdown("""
         margin: 1rem 0;
     }
     .footer {
-        position: relative !important;
+        position: relative;
+        width: 100%;
+        left: 0;
+        right: 0;
         background-color: #2c3e50;
         color: white;
-        padding: 1rem;
+        text-align: center;
+        padding: 1rem 0;
         margin-top: 3rem;
-        border-radius: 5px;
     }
     @keyframes fadeIn {
         from { opacity: 0; }
@@ -199,32 +200,6 @@ def main():
                     st.bar_chart(pd.Series(relevant_trigrams).sort_values(ascending=False).head(5))
                 else:
                     st.error("No training examples for this context - try different prompt")
-    
-    # --------------------------
-    # Educational Quizzes
-    # --------------------------
-    if 'language_model' in st.session_state:
-        st.header("🧠 Knowledge Check")
-        sample_trigrams = [
-            (f"{w1} {w2} → {next_word}", count)
-            for (w1,w2), next_words in st.session_state.language_model.model.items()
-            for next_word, count in next_words.items()
-        ]
-        if sample_trigrams:
-            selected = random.choice(sample_trigrams)
-            st.write(f"**Quiz:** How many times did the model see this pattern?")
-            st.code(f"{selected[0]}", language="text")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                user_guess = st.number_input("Your guess:", min_value=0)
-            with col2:
-                if st.button("Check Answer"):
-                    st.write(f"**Answer:** {selected[1]} occurrences")
-                    if user_guess == selected[1]:
-                        st.success("Correct! 🎉")
-                    else:
-                        st.error(f"Try again! Actual count was {selected[1]}")
     
     # --------------------------
     # Footer
