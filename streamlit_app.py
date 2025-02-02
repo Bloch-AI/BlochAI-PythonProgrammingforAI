@@ -1,25 +1,23 @@
+import os
+
+# Set the NLTK data directory to a writable location.
+os.environ['NLTK_DATA'] = '/tmp/nltk_data'
+
+# Make sure the directory exists.
+if not os.path.exists('/tmp/nltk_data'):
+    os.makedirs('/tmp/nltk_data')
+
+# Now import nltk and configure its data path.
+import nltk
+nltk.data.path.append('/tmp/nltk_data')
+nltk.download('punkt', download_dir='/tmp/nltk_data', quiet=True)
+
+
+
 import streamlit as st  # Importing Streamlit for building the web app
 import time  # Importing time for potential future use (not used here)
 import random  # Importing random for generating random numbers and choices
 import numpy as np  # Importing numpy for numerical operations
-import os
-
-# Set NLTK_DATA to a writable directory
-os.environ['NLTK_DATA'] = '/tmp/nltk_data'
-
-import nltk
-
-# Ensure the download directory exists (optional but good practice)
-if not os.path.exists('/tmp/nltk_data'):
-    os.makedirs('/tmp/nltk_data')
-
-# Download the 'punkt' tokenizer to the specified directory
-nltk.download('punkt', download_dir='/tmp/nltk_data', quiet=True)
-
-# Append the download directory to NLTK's data search paths
-nltk.data.path.append('/tmp/nltk_data')
-
-
 from nltk.tokenize import word_tokenize  # To split text into words
 from collections import defaultdict  # For dictionaries with default values
 import matplotlib.pyplot as plt  # For plotting charts and graphs
