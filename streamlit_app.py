@@ -2,7 +2,13 @@ import streamlit as st  # Importing Streamlit for building the web app
 import time  # Importing time for potential future use (not used here)
 import random  # Importing random for generating random numbers and choices
 import numpy as np  # Importing numpy for numerical operations
-import nltk  # Importing nltk for natural language processing tasks
+import os
+os.environ['NLTK_DATA'] = '/tmp/nltk_data'
+
+import nltk
+nltk.download('punkt', quiet=True)
+
+
 from nltk.tokenize import word_tokenize  # To split text into words
 from collections import defaultdict  # For dictionaries with default values
 import matplotlib.pyplot as plt  # For plotting charts and graphs
