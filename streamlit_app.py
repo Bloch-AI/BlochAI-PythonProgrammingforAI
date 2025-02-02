@@ -3,10 +3,10 @@ import time
 import random
 import numpy as np
 
-# Instead of using NLTK's default word_tokenize (which requires extra data), we use the
-# TreebankWordTokenizer. This is simpler and does not require downloading extra data.
+# -----------------------------------------------------------------------------
+# Use a simple rule-based tokenizer from NLTK that does not require extra downloads.
+# This avoids the need for the Punkt data.
 from nltk.tokenize import TreebankWordTokenizer
-# Create a global tokenizer instance.
 tokenizer = TreebankWordTokenizer()
 
 from collections import defaultdict
@@ -24,9 +24,8 @@ from sklearn.decomposition import PCA
 
 def load_embeddings(vocab):
     """
-    For each unique word in the vocabulary, we generate a random 50-dimensional vector.
-    In a real LLM, these would be pre-trained word embeddings. Here, they help us illustrate
-    how token representations might change in a Transformer.
+    For each unique word in the vocabulary, generate a random 50-dimensional vector.
+    In a real LLM, these would be pre-trained embeddings.
     """
     embeddings = {}
     for word in vocab:
@@ -35,52 +34,50 @@ def load_embeddings(vocab):
 
 class SimpleLanguageModel:
     """
-    A very simple language model that works on trigrams (three-word sequences). It learns
-    from the training text and uses the frequencies of trigrams to generate new text.
+    A very basic language model based on trigrams (groups of three words). It learns
+    which word tends to follow a given pair of words from the training text.
     """
     def __init__(self):
-        # The model is a nested dictionary: for each pair of words, we count how often a third word follows.
+        # For each two-word tuple, we count how often each third word follows.
         self.model = defaultdict(lambda: defaultdict(int))
         self.vocab = set()
 
     def train(self, text):
         """
         Tokenises the input text (converted to lower case) and builds a trigram model.
-        We use a simple rule-based tokeniser so that we don't require extra data downloads.
         """
-        # Tokenise the text using our TreebankWordTokenizer.
+        # Tokenise the text using our simple tokenizer.
         tokens = tokenizer.tokenize(text.lower())
         self.vocab.update(tokens)
-        # Build trigrams: For each two consecutive tokens, count the third token.
+        # Build the trigram counts.
         for i in range(len(tokens) - 2):
             self.model[(tokens[i], tokens[i + 1])][tokens[i + 2]] += 1
-        # Generate random embeddings for all words (for demonstration purposes).
+        # Generate random embeddings for demonstration.
         embeddings = load_embeddings(self.vocab)
         return tokens, embeddings
 
     def generate(self, start_tokens, length=10, temperature=1.0):
         """
-        Given a starting sequence (usually two tokens), generate more tokens based on the
-        learned trigram probabilities. The 'temperature' parameter affects how random the
-        selection is (lower temperature means more predictable, higher means more random).
+        Starting with a two-word context, generate additional tokens based on the
+        learned trigram probabilities. The 'temperature' parameter adjusts randomness.
         """
         current_tokens = start_tokens.copy()
-        # Record each step with a simple explanation.
         result = [{"token": token, "rationale": f"Starting token: '{token}'"} for token in current_tokens]
         for _ in range(length - len(start_tokens)):
             next_token_probs = self.model[(current_tokens[-2], current_tokens[-1])]
             if not next_token_probs:
-                break  # If there is no known next token, stop generating.
-            # Adjust probabilities using the temperature.
+                # If the current two-word context was never seen in training, stop generation.
+                break
+            # Adjust probabilities by temperature.
             adjusted_probs = {k: v ** (1 / temperature) for k, v in next_token_probs.items()}
             total = sum(adjusted_probs.values())
             adjusted_probs = {k: v / total for k, v in adjusted_probs.items()}
-            # Randomly choose the next token based on the adjusted probabilities.
+            # Randomly choose the next token.
             next_token = random.choices(list(adjusted_probs.keys()), weights=list(adjusted_probs.values()))[0]
             rationale = (
                 f"Token '{next_token}' was chosen because, in the training text, it followed "
                 f"the sequence '{current_tokens[-2]} {current_tokens[-1]}'. "
-                f"(Original frequencies: {next_token_probs} and after adjusting for temperature: {adjusted_probs})"
+                f"(Original frequencies: {next_token_probs}, adjusted for temperature: {adjusted_probs})"
             )
             result.append({"token": next_token, "rationale": rationale})
             current_tokens.append(next_token)
@@ -88,15 +85,13 @@ class SimpleLanguageModel:
 
 def simulate_attention(input_tokens, output_tokens):
     """
-    This function simulates an 'attention' matrix. In real Transformer models, attention shows
-    how each generated word 'attends' (or relates) to the input words. Here, we simply generate
-    random values for demonstration.
+    Simulate an attention matrix (as used in Transformer models) using random values.
+    Each row is normalised to sum to 1.
     """
     attention_matrix = [
         [random.random() for _ in range(len(input_tokens))]
         for _ in range(len(output_tokens))
     ]
-    # Normalise each row so that the scores add up to 1.
     for row in attention_matrix:
         total = sum(row)
         for i in range(len(row)):
@@ -105,9 +100,8 @@ def simulate_attention(input_tokens, output_tokens):
 
 class SimpleTransformerBlock(tf.keras.layers.Layer):
     """
-    A simplified Transformer block which includes multi-head self-attention and a feed-forward
-    network. This is only for demonstration and visualisation of how token embeddings might be
-    transformed in a real model.
+    A simplified Transformer block that applies multi-head self-attention and a feed-forward
+    network. This is only for illustration purposes.
     """
     def __init__(self, embed_dim, num_heads, ff_dim, rate=0.1):
         super(SimpleTransformerBlock, self).__init__()
@@ -131,8 +125,7 @@ class SimpleTransformerBlock(tf.keras.layers.Layer):
 
 def display_ngram_bar_chart(model):
     """
-    Displays a bar chart of the top 10 most frequent three-word sequences (trigrams) learned
-    from the training text.
+    Show a bar chart of the 10 most common trigrams (three-word sequences) learned from the training text.
     """
     st.subheader("Step 3: Trigram Frequency Visualisation")
     st.write("The bar chart below shows the 10 most common three-word sequences in your training text.")
@@ -153,12 +146,10 @@ def display_ngram_bar_chart(model):
 
 def display_ngram_wordcloud(model):
     """
-    Displays a word cloud of the learned three-word sequences. In the word cloud, larger
-    text indicates higher frequency.
+    Show a word cloud of the trigrams learned from the training text. Larger text indicates higher frequency.
     """
     st.subheader("Step 4: Trigram Word Cloud")
-    st.write("The word cloud below shows the trigrams learned from your training text. Bigger words "
-             "indicate that the sequence appears more frequently.")
+    st.write("The word cloud below shows the trigrams learned from your training text. Bigger words indicate a higher frequency.")
     ngram_counts = defaultdict(int)
     for (w1, w2), next_words in model.items():
         for next_word, count in next_words.items():
@@ -182,33 +173,29 @@ def main():
     st.write(
         """
         **Welcome!**  
-        This educational app simulates how a large language model (LLM) works using a simple trigram 
-        model. The process is broken down into several steps:
+        This educational app demonstrates, in a simplified way, how a large language model (LLM) works.  
         
-        **Step 1:** Enter some training text.  
-        **Step 2:** The programme will learn patterns from your text (using groups of three words).  
-        **Step 3:** You can view visualisations that explain what the model has learnt.  
-        **Step 4:** Ask a question (prompt) and the model will generate an answer using the patterns it learned.
+        **Step 1:** Enter training text.  
+        **Step 2:** The model learns patterns from your text (using groups of three words).  
+        **Step 3:** You can view visualisations of what the model has learnt.  
+        **Step 4:** Ask a question (prompt) and the model will generate an answer based on its learning.
         
-        *Note:* This is a simplified demonstration and does not represent the full complexity of real LLMs.
+        *Note:* In real life, LLMs are very complex. This demo uses a simple trigram model for clarity.
         """
     )
 
-    # ----------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # STEP 1: Input Training Text
-    # ----------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     st.header("Step 1: Enter Training Text")
-    st.write("Please enter some text below. The model will use this text to learn patterns (in UK English).")
+    st.write("Please enter some text below. The model will use this text to learn word patterns (in UK English).")
     input_text = st.text_area("Training Text", height=150)
 
-    # ----------------------------------------------------------------------------
-    # Process the Training Text
-    # ----------------------------------------------------------------------------
     if st.button("Train Model"):
         if input_text.strip() == "":
             st.warning("Please enter some training text to proceed.")
         else:
-            # Initialise the language model if it hasn't been already.
+            # Initialise the language model.
             if 'language_model' not in st.session_state:
                 st.session_state.language_model = SimpleLanguageModel()
             tokens, embeddings = st.session_state.language_model.train(input_text)
@@ -216,21 +203,21 @@ def main():
             st.session_state.embeddings = embeddings
 
             st.success("Training complete! The model has learned from your text.")
-            st.write("For example, it has learnt these words and patterns (trigrams):")
+            st.write("For example, it has learnt these words and trigram patterns:")
             model_display = {str(k): dict(v) for k, v in st.session_state.language_model.model.items()}
             st.json(model_display)
 
-            # Show some visualisations.
+            # Display visualisations.
             display_ngram_bar_chart(st.session_state.language_model.model)
             display_ngram_wordcloud(st.session_state.language_model.model)
 
-    # ----------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # STEP 2: Ask a Question (Prompt)
-    # ----------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     st.header("Step 2: Ask a Question")
     st.write(
-        "LLMs work by taking a prompt (a question or instruction) and generating an answer based on "
-        "what they have learned. Enter your question below and click 'Get Answer'."
+        "LLMs work by taking a prompt (a question or instruction) and generating an answer based on what they have learned. "
+        "Before asking a question, please ensure you have trained the model above."
     )
     prompt_text = st.text_input("Your Question", placeholder="Enter your question here (in UK English)")
     if st.button("Get Answer"):
@@ -240,28 +227,32 @@ def main():
         elif prompt_text.strip() == "":
             st.warning("Please enter a question.")
         else:
-            # Tokenise the prompt. If fewer than 2 tokens, add a default word.
             prompt_tokens = tokenizer.tokenize(prompt_text.lower())
             if len(prompt_tokens) < 2:
                 st.warning("Please enter a longer question (at least two words).")
             else:
-                # Use the first two tokens of the prompt as context.
+                # Use the first two tokens of the prompt as the starting context.
                 start_tokens = prompt_tokens[:2]
                 st.write(f"Using the starting context: {start_tokens}")
-                # Generate an answer (we generate 20 tokens for the answer; adjust if desired).
+                # Generate an answer. (Here we attempt to generate 20 tokens.)
                 output_with_rationales = st.session_state.language_model.generate(start_tokens, length=20, temperature=1.0)
                 generated_tokens = [entry["token"] for entry in output_with_rationales]
-                answer = " ".join(generated_tokens)
-                st.subheader("Answer")
-                st.write(answer)
-                with st.expander("See How the Answer Was Generated (Step-by-Step)"):
-                    for i, entry in enumerate(output_with_rationales):
-                        st.write(f"{i}: **{entry['token']}** — {entry['rationale']}")
+                # If no additional tokens were generated, explain why.
+                if len(generated_tokens) <= 2:
+                    st.error("The model could not generate an answer. "
+                             "This may be because the training text does not provide enough context for the given prompt. "
+                             "Please try training the model with more detailed text.")
+                else:
+                    answer = " ".join(generated_tokens)
+                    st.subheader("Answer")
+                    st.write(answer)
+                    with st.expander("See How the Answer Was Generated (Step-by-Step)"):
+                        for i, entry in enumerate(output_with_rationales):
+                            st.write(f"{i}: **{entry['token']}** — {entry['rationale']}")
 
-    # ----------------------------------------------------------------------------
-    # Optional: Visualise Attention and Transformer Block
-    # (These sections are more advanced and provide further insight into how models work.)
-    # ----------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # Advanced Visualisations (Optional)
+    # --------------------------------------------------------------------------
     if 'output_with_rationales' in st.session_state:
         st.header("Additional Visualisations (Advanced)")
         st.subheader("Attention Visualisation")
@@ -283,7 +274,7 @@ def main():
         st.subheader("Transformer Block Simulation")
         st.write(
             "A Transformer block processes word embeddings to produce new representations. "
-            "Below, we use PCA to reduce the dimensions of the original and transformed embeddings so you can see the change."
+            "Below, PCA is used to reduce the dimensions of the original and transformed embeddings so you can see the difference."
         )
         tokens = st.session_state.tokens
         embeddings = st.session_state.embeddings
@@ -293,13 +284,13 @@ def main():
         transformer_block = SimpleTransformerBlock(embed_dim=50, num_heads=2, ff_dim=64)
         transformed_embeddings = transformer_block(embedding_matrix_batch, training=False)
         transformed_embeddings = transformed_embeddings.numpy().squeeze(0)
-        # Combine the original and transformed embeddings for PCA.
+        # Combine original and transformed embeddings for PCA.
         combined = np.concatenate([embedding_matrix, transformed_embeddings], axis=0)
         pca = PCA(n_components=2)
         combined_2d = pca.fit_transform(combined)
         original_2d = combined_2d[:len(tokens)]
         transformed_2d = combined_2d[len(tokens):]
-        
+
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.scatter(original_2d[:, 0], original_2d[:, 1], color='blue', label='Original Embeddings')
         for i, token in enumerate(tokens):
@@ -334,9 +325,8 @@ footer.markdown(
     }
     </style>
     <div class="footer">
-        <p>© 2025 Bloch AI LTD - All Rights Reserved. <a href="https://www.bloch.ai" style="color: white;">www.bloch.ai</a></p>
+        <p>© 2024 Bloch AI LTD - All Rights Reserved. <a href="https://www.bloch.ai" style="color: white;">www.bloch.ai</a></p>
     </div>
     ''',
     unsafe_allow_html=True
 )
-
