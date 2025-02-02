@@ -1,16 +1,28 @@
 import os
 
-# Set the NLTK data directory to a writable location.
+# Set NLTK data directory to a writable location.
 os.environ['NLTK_DATA'] = '/tmp/nltk_data'
 
-# Make sure the directory exists.
+# Create the directory if it doesn't exist.
 if not os.path.exists('/tmp/nltk_data'):
     os.makedirs('/tmp/nltk_data')
 
-# Now import nltk and configure its data path.
+# Import nltk and update its data search path.
 import nltk
-nltk.data.path.append('/tmp/nltk_data')
-nltk.download('punkt', download_dir='/tmp/nltk_data', quiet=True)
+nltk.data.path.insert(0, '/tmp/nltk_data')
+
+# (Optional) Print the current nltk.data paths for debugging.
+print("NLTK data paths:", nltk.data.path)
+
+# Download the 'punkt' resource into our writable directory.
+nltk.download('punkt', download_dir='/tmp/nltk_data', quiet=False)
+
+# (Optional) Verify that 'punkt' is now available.
+try:
+    nltk.data.find('tokenizers/punkt')
+    print("Punkt tokenizer found.")
+except LookupError:
+    print("Punkt tokenizer not found!")
 
 
 
@@ -18,7 +30,10 @@ import streamlit as st  # Importing Streamlit for building the web app
 import time  # Importing time for potential future use (not used here)
 import random  # Importing random for generating random numbers and choices
 import numpy as np  # Importing numpy for numerical operations
-from nltk.tokenize import word_tokenize  # To split text into words
+from nltk.tokenize import word_tokenize
+# Explicitly specify language, though the default should be English.
+tokens = word_tokenize(text.lower(), language="english")
+
 from collections import defaultdict  # For dictionaries with default values
 import matplotlib.pyplot as plt  # For plotting charts and graphs
 import seaborn as sns  # For enhancing plot styles
@@ -27,10 +42,6 @@ import pandas as pd  # For data manipulation
 import tensorflow as tf  # For deep learning operations
 from tensorflow.keras.layers import Dense, LayerNormalization  # For building neural network layers
 from sklearn.decomposition import PCA  # For dimensionality reduction in visualization
-
-# Download necessary NLTK data
-nltk.download('punkt', quiet=True)
-
 # Function to load (or simulate) pre-trained word embeddings.
 def load_embeddings(vocab):
     embeddings = {}
